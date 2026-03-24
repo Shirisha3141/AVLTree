@@ -94,6 +94,104 @@ class AVLTree {
     };
     setCoords(this.root, canvas.width / 2, 80, 180);
   }
+
+  delete(node, value) {
+    if (!node) {
+      logMessage("Value not found in the tree.");
+      return node;
+    }
+
+    if (value < node.value) {
+      logMessage(`Going left to delete value: ${value}`);
+      node.left = this.delete(node.left, value);
+    } else if (value > node.value) {
+      logMessage(`Going right to delete value: ${value}`);
+      node.right = this.delete(node.right, value);
+    } else {
+      logMessage(`Found node to delete: ${node.value}`);
+
+      // Node with one or no child
+      if (!node.left || !node.right) {
+        const temp = node.left ? node.left : node.right;
+
+        if (!temp) {
+          logMessage("Node has no children, deleting directly.");
+          node = null;
+        } else {
+          logMessage("Node has one child, replacing with child.");
+          node = temp;
+        }
+      } else {
+        // Node with two children
+        const temp = this.getMinValueNode(node.right);
+        logMessage(`Node has two children, replacing with inorder successor: ${temp.value}`);
+        node.value = temp.value;
+        node.right = this.delete(node.right, temp.value);
+      }
+    }
+
+    if (!node) return node;
+
+    // Update height
+    node.height = 1 + Math.max(this.height(node.left), this.height(node.right));
+
+    // Rebalance the tree
+    const balance = this.getBalance(node);
+
+    // Left Left Case
+    if (balance > 1 && this.getBalance(node.left) >= 0) {
+      logMessage("Performing right rotation.");
+      return this.rotateRight(node);
+    }
+
+    // Left Right Case
+    if (balance > 1 && this.getBalance(node.left) < 0) {
+      logMessage("Performing left-right rotation.");
+      node.left = this.rotateLeft(node.left);
+      return this.rotateRight(node);
+    }
+
+    // Right Right Case
+    if (balance < -1 && this.getBalance(node.right) <= 0) {
+      logMessage("Performing left rotation.");
+      return this.rotateLeft(node);
+    }
+
+    // Right Left Case
+    if (balance < -1 && this.getBalance(node.right) > 0) {
+      logMessage("Performing right-left rotation.");
+      node.right = this.rotateRight(node.right);
+      return this.rotateLeft(node);
+    }
+
+    return node;
+  }
+
+  getMinValueNode(node) {
+    logMessage(`Finding inorder successor starting from node: ${node.value}`);
+    while (node.left) {
+      logMessage(`Moving left to find inorder successor: ${node.left.value}`);
+      node = node.left;
+    }
+    logMessage(`Inorder successor found: ${node.value}`);
+    return node;
+  }
+
+  remove(value) {
+    logMessage(`Removing value: ${value}`);
+    this.root = this.delete(this.root, value);
+    if (this.root) {
+      logMessage("Tree updated after deletion.");
+      this.updatePositions();
+      this.drawTree();
+      logMessage("Tree redrawn on canvas.");
+    } else {
+      logMessage("Tree is now empty.");
+      const canvas = document.getElementById("treeCanvas");
+      const ctx = canvas.getContext("2d");
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+  }
 }
 
 const tree = new AVLTree();
@@ -163,3 +261,18 @@ document.getElementById("insertBtn").addEventListener("click", () => {
 document.getElementById("clearBtn").addEventListener("click", () => {
   tree.root = null;
 });
+
+document.getElementById("deleteBtn").addEventListener("click", () => {
+  const value = parseInt(document.getElementById("value").value);
+  if (!isNaN(value)) {
+    logMessage(`Attempting to delete value: ${value}`);
+    tree.remove(value);
+    logMessage("Delete operation completed. Tree updated.");
+  } else {
+    logMessage("Invalid input. Please enter a valid number to delete.");
+  }
+});
+
+function logMessage(message) {
+  console.log(message);
+}
